@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';  //위치 정보 받아오기 위해 geolocator 패키지 import
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:weather_app/data/my_location.dart';
+import 'package:weather_app/data/network.dart';
+import 'package:weather_app/screens/weather_screen.dart';
+const apiKey = '9e1b6bc90520b347f70432c739d3a401';
 
 class Loading extends StatefulWidget {
   const Loading({Key? key}) : super(key: key);
@@ -12,43 +13,50 @@ class Loading extends StatefulWidget {
 
 class _LoadingState extends State<Loading> {
 
+  double? latitude3;
+  double? longitude3;
+
   //앱을 실행시키자마자 내 위치(위도/경도) 출력
   void initState(){
     super.initState();
     getLocation();
-    fetchData();
   }
 
-  void getLocation () async{  //await가 사용되었기 때문에 이 메소드는 async 방식이 되어야 함
-    try {
-      LocationPermission permission = await Geolocator.requestPermission();
-      Position position = await Geolocator.
-      getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      //내 위치 정보 받아오기
-      //desiredAccuracy: 위치 정확도
-      print(position);
-    } catch(e){
-      print('인터넷 연결이 불안정합니다.');
-    }
+  void getLocation () async{
+    MyLocation myLocation = MyLocation();
+    await myLocation.getMyCurrentLocation();
+    //위도 경도 불러올 때까지 기다려야 하므로 await 키워드 사용
+    //await: future의 값 리턴될 때까지 기다려야 한다는 의미
+    latitude3 = myLocation.latitude2;
+    longitude3 = myLocation.longitude2;
+    print(latitude3);
+    print(longitude3);
+    
+    Network network = Network('https://api.openweathermap.org/data/2.5/weather?'
+        'lat=$latitude3&lon=$longitude3&appid=$apiKey&units=metric');
+
+    var weatherData = await network.getJsonData();
+    print(weatherData);
+    Navigator.push(context, MaterialPageRoute(builder: (context){
+      return WeatherScreen(parseWeatherData: weatherData,);
+    }));
   }
 
   //날씨 정보 받아오기(더미데이터)
-  void fetchData() async{
-    http.Response response = await http.get(Uri.parse('https://samples.openweathermap.org/data/2.5/weather?'
-        'q=London&appid=b1b15e88fa797225412429c1c50c122a1'));
-    if(response.statusCode == 200){ //정상적인 출력, json 파싱 부분
-      String jsonData = response.body;
-      var myJason = jsonDecode(jsonData)['weather'][0]['description'];
-      var wind = jsonDecode(jsonData)['wind']['speed'];
-      var id = jsonDecode(jsonData)['id'];
-      print(myJason);
-      print(wind);
-      print(id);
+  /*void fetchData() async{
 
+      var myJson = parsingData['weather'][0]['description'];
+      print(myJson);
+
+      var wind = parsingData['wind']['speed'];
+      print(wind);
+
+      var id = parsingData['id'];
+      print(id);
     } else{
       print(response.statusCode);
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
